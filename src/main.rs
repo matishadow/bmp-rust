@@ -3,6 +3,12 @@ use image::io::Reader as ImageReader;
 use std::io;
 use image::GenericImageView;
 use std::fs;
+use std::convert::TryInto;
+
+fn convert_to_array<T, const N: usize>(v: Vec<T>) -> [T; N] {
+    v.try_into()
+        .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
+}
 
 struct BmpHeader {
     header_type: [char; 2],
@@ -84,11 +90,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let bmp_file = BmpFile::new(&data);
 
-    let dynamic_image = ImageReader::open(path)?.decode()?;
-
-    let rgb_image = dynamic_image.to_rgb8();
-
-    let image_view = ImageView::new(ImageInfo::rgb8(dynamic_image.width(), dynamic_image.height()), rgb_image.as_raw());
+    let image_view = ImageView::new(
+        ImageInfo::rgb8(bmp_file.info_header.height as u32, bmp_file.info_header.height as u32),
+        &bmp_file.data);
 
     // Create a window with default options and display the image.
     let window = create_window("image", Default::default())?;

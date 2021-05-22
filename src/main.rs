@@ -28,7 +28,8 @@ struct InfoHeader {
 
 struct BmpFile {
     header: BmpHeader,
-    info_header: InfoHeader
+    info_header: InfoHeader,
+    data: Vec<u8>
 }
 
 impl BmpHeader {
@@ -61,16 +62,27 @@ impl InfoHeader {
     }
 }
 
+impl BmpFile {
+    pub fn new(bytes: &Vec<u8>) -> BmpFile {
+        let header = BmpHeader::new(&bytes);
+        let info_header = InfoHeader::new(&bytes);
+        let data = &bytes[header.offset as usize..bytes.len() as usize];
+
+        return Self {
+            header,
+            info_header,
+            data: data.iter().cloned().collect()
+        };
+    }
+}
+
 #[show_image::main]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = "/home/matishadow/.config/JetBrains/Rider2020.3/scratches/bmp-rust/imgs/test-image.bmp";
 
     let data = fs::read(path).unwrap();
 
-    let bmp_file = BmpFile{
-        header: BmpHeader::new(&data),
-        info_header: InfoHeader::new(&data)
-    };
+    let bmp_file = BmpFile::new(&data);
 
     let dynamic_image = ImageReader::open(path)?.decode()?;
 

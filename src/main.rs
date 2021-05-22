@@ -4,7 +4,6 @@ use std::io;
 use image::GenericImageView;
 use std::fs;
 
-#[repr(packed)]
 struct BmpHeader {
     header_type: [char; 2],
     size: u32,
@@ -13,8 +12,27 @@ struct BmpHeader {
     offset: u32,
 }
 
+struct InfoHeader {
+    size: u32,
+    width: i32,
+    height: i32,
+    planes: u16,
+    bits: u16,
+    compression: u32,
+    image_size: u32,
+    x_resolution: i32,
+    y_resolution: i32,
+    n_colors: u32,
+    important_colors: u32
+}
+
+struct BmpFile {
+    header: BmpHeader,
+    info_header: InfoHeader
+}
+
 impl BmpHeader {
-    pub fn new(bytes: Vec<u8>) -> Self {
+    pub fn new(bytes: &Vec<u8>) -> Self {
         Self {
             header_type: [bytes[0] as char, bytes[1] as char],
             size: ((bytes[5] as u32) << 24 | (bytes[4] as u32) << 16 | (bytes[3] as u32) << 8 | bytes[2] as u32) as u32,
@@ -25,14 +43,34 @@ impl BmpHeader {
     }
 }
 
+impl InfoHeader {
+    pub fn new(bytes: &Vec<u8>) -> Self {
+        Self {
+            size: ((bytes[17] as u32) << 24 | (bytes[16] as u32) << 16 | (bytes[15] as u32) << 8 | bytes[14] as u32) as u32,
+            width: ((bytes[21] as i32) << 24 | (bytes[20] as i32) << 16 | (bytes[19] as i32) << 8 | bytes[18] as i32) as i32,
+            height: ((bytes[25] as i32) << 24 | (bytes[24] as i32) << 16 | (bytes[23] as i32) << 8 | bytes[22] as i32) as i32,
+            planes: ((bytes[27] as u16) << 8 | bytes[26] as u16) as u16,
+            bits: ((bytes[29] as u16) << 8 | bytes[28] as u16) as u16,
+            compression: ((bytes[33] as u32) << 24 | (bytes[32] as u32) << 16 | (bytes[32] as u32) << 8 | bytes[30] as u32) as u32,
+            image_size: ((bytes[37] as u32) << 24 | (bytes[36] as u32) << 16 | (bytes[35] as u32) << 8 | bytes[34] as u32) as u32,
+            x_resolution: ((bytes[41] as i32) << 24 | (bytes[40] as i32) << 16 | (bytes[39] as i32) << 8 | bytes[38] as i32) as i32,
+            y_resolution: ((bytes[45] as i32) << 24 | (bytes[44] as i32) << 16 | (bytes[43] as i32) << 8 | bytes[42] as i32) as i32,
+            n_colors: ((bytes[49] as u32) << 24 | (bytes[48] as u32) << 16 | (bytes[47] as u32) << 8 | bytes[46] as u32) as u32,
+            important_colors: ((bytes[53] as u32) << 24 | (bytes[52] as u32) << 16 | (bytes[51] as u32) << 8 | bytes[50] as u32) as u32
+        }
+    }
+}
+
 #[show_image::main]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = "/home/matishadow/.config/JetBrains/Rider2020.3/scratches/bmp-rust/imgs/test-image.bmp";
 
     let data = fs::read(path).unwrap();
-    let header_size = std::mem::size_of::<BmpHeader>();
 
-    let header = BmpHeader::new(data);
+    let bmp_file = BmpFile{
+        header: BmpHeader::new(&data),
+        info_header: InfoHeader::new(&data)
+    };
 
     let dynamic_image = ImageReader::open(path)?.decode()?;
 

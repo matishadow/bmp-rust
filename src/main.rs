@@ -1,6 +1,6 @@
 use show_image::{ImageView, ImageInfo, create_window};
 use image::io::Reader as ImageReader;
-use std::io;
+use std::{io, env};
 use image::GenericImageView;
 use std::fs;
 use std::convert::TryInto;
@@ -29,13 +29,13 @@ struct InfoHeader {
     x_resolution: i32,
     y_resolution: i32,
     n_colors: u32,
-    important_colors: u32
+    important_colors: u32,
 }
 
 struct BmpFile {
     header: BmpHeader,
     info_header: InfoHeader,
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl BmpHeader {
@@ -63,7 +63,7 @@ impl InfoHeader {
             x_resolution: ((bytes[41] as i32) << 24 | (bytes[40] as i32) << 16 | (bytes[39] as i32) << 8 | bytes[38] as i32) as i32,
             y_resolution: ((bytes[45] as i32) << 24 | (bytes[44] as i32) << 16 | (bytes[43] as i32) << 8 | bytes[42] as i32) as i32,
             n_colors: ((bytes[49] as u32) << 24 | (bytes[48] as u32) << 16 | (bytes[47] as u32) << 8 | bytes[46] as u32) as u32,
-            important_colors: ((bytes[53] as u32) << 24 | (bytes[52] as u32) << 16 | (bytes[51] as u32) << 8 | bytes[50] as u32) as u32
+            important_colors: ((bytes[53] as u32) << 24 | (bytes[52] as u32) << 16 | (bytes[51] as u32) << 8 | bytes[50] as u32) as u32,
         }
     }
 }
@@ -77,28 +77,35 @@ impl BmpFile {
         return Self {
             header,
             info_header,
-            data: data.iter().cloned().collect()
+            data: data.iter().cloned().collect(),
         };
     }
 }
 
 #[show_image::main]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = "/home/matishadow/.config/JetBrains/Rider2020.3/scratches/bmp-rust/imgs/test-image.bmp";
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2
+    { panic!("No file path was provided!"); }
+
+    let path = &args[1];
 
     let data = fs::read(path).unwrap();
 
     let bmp_file = BmpFile::new(&data);
 
+    if bmp_file.header.header_type != ['B', 'M']
+    { panic!("Loaded image is not a bitmap!"); }
+
     let width = bmp_file.info_header.width as u32;
     let height = bmp_file.info_header.height as u32;
 
-    let mut inverted : Vec<u8> = Vec::new();
+    let mut inverted: Vec<u8> = Vec::new();
     for i in 0..height {
         for j in 0..width {
-            inverted.push(bmp_file.data[(((height - i - 1) * width +  j) * 3) as usize]);
-            inverted.push(bmp_file.data[(((height - i - 1) * width +  j) * 3 + 1) as usize]);
-            inverted.push(bmp_file.data[(((height - i - 1) * width +  j) * 3 + 2) as usize]);
+            inverted.push(bmp_file.data[(((height - i - 1) * width + j) * 3) as usize]);
+            inverted.push(bmp_file.data[(((height - i - 1) * width + j) * 3 + 1) as usize]);
+            inverted.push(bmp_file.data[(((height - i - 1) * width + j) * 3 + 2) as usize]);
         }
     }
 

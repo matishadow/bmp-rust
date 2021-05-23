@@ -90,9 +90,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let bmp_file = BmpFile::new(&data);
 
+    let width = bmp_file.info_header.width as u32;
+    let height = bmp_file.info_header.height as u32;
+
+    let mut inverted : Vec<u8> = Vec::new();
+    for i in 0..height {
+        for j in 0..width {
+            inverted.push(bmp_file.data[(((height - i - 1) * width +  j) * 3) as usize]);
+            inverted.push(bmp_file.data[(((height - i - 1) * width +  j) * 3 + 1) as usize]);
+            inverted.push(bmp_file.data[(((height - i - 1) * width +  j) * 3 + 2) as usize]);
+        }
+    }
+
     let image_view = ImageView::new(
-        ImageInfo::rgb8(bmp_file.info_header.height as u32, bmp_file.info_header.height as u32),
-        &bmp_file.data);
+        ImageInfo::bgr8(width, height),
+        &inverted);
 
     // Create a window with default options and display the image.
     let window = create_window("image", Default::default())?;
